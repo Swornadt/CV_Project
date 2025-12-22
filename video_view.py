@@ -2,25 +2,39 @@ import serial
 import cv2
 import numpy as np
 
-# Change 'COM3' to your actual port
-ser = serial.Serial('COM3', 1000000) 
+# Try 460800 - the middle ground speed
+ser = serial.Serial('COM10', 460800, timeout=0.5, rtscts=False, dsrdtr=False)
+ser.dtr = False
+ser.rts = False
+
+buffer = b""
 
 while True:
-    # Look for our header [0xAA, 0xBB]
-    if ser.read() == b'\xaa':
-        if ser.read() == b'\xbb':
-            # Read 4 bytes for size
-            size_bytes = ser.read(4)
-            size = int.from_bytes(size_bytes, byteorder='big')
-            
-            # Read the image data
-            img_data = ser.read(size)
-            
-            # Convert to image
-            nparr = np.frombuffer(img_data, np.uint8)
-            img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
-            
-            if img is not None:
-                cv2.imshow('ESP32-CAM Stream', img)
-                if cv2.waitKey(1) & 0xFF == ord('q'):
-                    break
+    if ser.in_waiting > 0:
+        buffer += ser.read(ser.in_waiting)
+        
+    # Find markers
+    start = buffer.find(b'\xff\xd8')
+    end = buffer.find(b'\xff\xd9')
+    
+    if start != -1 and end != -1 and end > start:
+        jpg = buffer[start:end+2]
+        # RECOVERY: Always keep the data AFTER the current frame
+        buffer = buffer[end+2:] 
+        
+        nparr = np.frombuffer(jpg, np.uint8)
+        img = cv2.imdecode(nparr, cv2.IMREAD_COLOR)
+        if img is not None:
+            cv2.imshow("Stable Stream", img)
+    
+    # RECOVERY: If we have a start but no end for too long, 
+    # the frame is likely corrupted. Clear it.
+    elif start != -1 and len(buffer) > 15000: 
+        buffer = b""
+
+    # Press 'q' to quit
+    if cv2.waitKey(1) & 0xFF == ord('q'):
+        break
+
+ser.close()
+cv2.destroyAllWindows()
