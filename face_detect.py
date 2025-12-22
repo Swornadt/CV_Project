@@ -49,7 +49,7 @@ while True:
         cv.putText(frame, str(pos), (fx+15, fy-15), cv.FONT_HERSHEY_PLAIN, 2, (255, 0, 0), 2 )
         cv.line(frame, (0, fy), (ws, fy), (0, 0, 0), 2)  # X-axis line (horizontal)
         cv.line(frame, (fx, hs), (fx, 0), (0, 0, 0), 2)  # Y-axis line (vertical)
-        cv.circle(frame, pos, 15, (0, 0, 255), cv.FILLED) # Center dot
+        cv.circle(frame, pos, 6, (0, 0, 255), cv.FILLED) # Center dot
         cv.putText(frame, "TARGET LOCKED", (int(ws * 0.7), 50), cv.FONT_HERSHEY_PLAIN, 2, (255, 0, 255), 3 )
     # --- END TARGETING LOGIC ---
 
