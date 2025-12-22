@@ -1,5 +1,4 @@
 #include "esp_camera.h"
-#include <WiFi.h>
 
 // ===========================
 // Select camera model in board_config.h
@@ -16,7 +15,7 @@ void startCameraServer();
 void setupLedFlash();
 
 void setup() {
-  Serial.begin(115200);
+  Serial.begin(1000000); // 1Mbps
   Serial.setDebugOutput(true);
   Serial.println();
 
@@ -125,6 +124,24 @@ void setup() {
 }
 
 void loop() {
-  // Do nothing. Everything is done in another task by the web server
-  delay(10000);
+  camera_fb_t * fb = esp_camera_fb_get();
+  if (!fb) {
+    return;
+  }
+
+  // Send a 'header' so the computer knows a new frame is starting
+  Serial.write(0xAA); 
+  Serial.write(0xBB);
+  
+  // Send the size of the image (4 bytes)
+  uint32_t size = fb->len;
+  Serial.write((uint8_t)((size >> 24) & 0xFF));
+  Serial.write((uint8_t)((size >> 16) & 0xFF));
+  Serial.write((uint8_t)((size >> 8) & 0xFF));
+  Serial.write((uint8_t)(size & 0xFF));
+
+  // Send the actual image data
+  Serial.write(fb->buf, fb->len);
+
+  esp_camera_fb_return(fb);
 }
