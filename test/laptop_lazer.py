@@ -41,8 +41,8 @@ class LaptopTurret:
                 (x, y, w, h) = faces[0]
                 fx, fy = x + w//2, y + h//2
                 
-                pan = int(90 + ((fx - CENTER_X) * 0.5))
-                tilt = int(90 + ((fy - CENTER_Y) * 0.5))
+                pan = int(90 - ((fx - CENTER_X) * 0.3))
+                tilt = int(90 + ((fy - CENTER_Y) * 0.3))
                 pan = max(0, min(180, pan))
                 tilt = max(0, min(180, tilt))
 
