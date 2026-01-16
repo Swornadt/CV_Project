@@ -1,67 +1,82 @@
-import cv2, urllib.request, numpy as np, serial, time
+import cv2
+import serial
+import time
 
 # --- CONFIG ---
-URL = "http://192.168.4.1/stream" # Check Serial Monitor for this!
+URL = "http://192.168.137.196/stream" # Use the IP that worked in your test
 PORT = 'COM10'
 BAUD = 115200
 
 class StationaryCamTurret:
     def __init__(self):
-        print(f"Connecting to {PORT}...")
-        # Fix: changed dtr=False to dsrdtr=False
-        self.ser = serial.Serial(PORT, BAUD, timeout=0.1, dsrdtr=False) 
+        # 1. Initialize Serial first
+        print(f"Connecting to Serial {PORT}...")
+        try:
+            # We open the port and then WAIT. This allows the ESP32 to 
+            # finish its "reboot" caused by the USB connection.
+            self.ser = serial.Serial()
+            self.ser.port = PORT
+            self.ser.baudrate = BAUD
+            self.ser.timeout = 0.1
+            self.ser.setDTR(False) # Prevent Reset
+            self.ser.setRTS(False) # Prevent Reset
+            self.ser.open()
+            print("✓ Serial Connected. Waiting 5 seconds for ESP32 to reboot and connect to WiFi...")
+            time.sleep(5) 
+        except Exception as e:
+            print(f"⚠ Serial Warning: {e}")
+            self.ser = None
+
+        # 2. Open Video (Identical to your working test script)
+        print(f"Opening stream from {URL}...")
+        self.cap = cv2.VideoCapture(URL)
         
-        # Give the ESP32 a moment to wake up after Serial connection
-        time.sleep(2) 
-        
-        print(f"Opening Video Stream from {URL}...")
-        self.stream = urllib.request.urlopen(URL)
+        if not self.cap.isOpened():
+            print("✗ Stream Error: Still getting -138. Is the IP correct?")
+            exit()
+            
+        print("✓ Stream Connected! Running Face Detection...")
         self.face_cascade = cv2.CascadeClassifier(cv2.data.haarcascades + 'haarcascade_frontalface_default.xml')
-        self.bytes = b''
         self.last_send_time = 0
 
     def run(self):
         while True:
-            # MJPEG stream decoding
-            self.bytes += self.stream.read(4096)
-            a = self.bytes.find(b'\xff\xd8')
-            b = self.bytes.find(b'\xff\xd9')
+            ret, frame = self.cap.read()
+            if not ret:
+                print("Failed to fetch frame.")
+                break
             
-            if a != -1 and b != -1:
-                jpg = self.bytes[a:b+2]
-                self.bytes = self.bytes[b+2:]
-                frame = cv2.imdecode(np.frombuffer(jpg, dtype=np.uint8), cv2.IMREAD_COLOR)
+            # AI Logic
+            gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+            faces = self.face_cascade.detectMultiScale(gray, 1.2, 5)
 
-                if frame is not None:
-                    h, w = frame.shape[:2]
-                    cx, cy = w // 2, h // 2  # This will correctly find 80, 60
-                    
-                    gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-                    faces = self.face_cascade.detectMultiScale(gray, 1.1, 5)
+            if len(faces) > 0:
+                (x, y, fw, fh) = faces[0]
+                fx, fy = x + fw//2, y + fh//2
+                
+                # Draw on frame
+                cv2.rectangle(frame, (x, y), (x+fw, y+fh), (0, 255, 0), 2)
+                
+                # Map to degrees
+                pan = int(90 - (fx - (frame.shape[1]//2)) * 0.2)
+                tilt = int(80 + (fy - (frame.shape[0]//2)) * 0.2) # offset correction
+                fire = 1 if (abs(fx - (frame.shape[1]//2)) < 30) else 0
 
-                    if len(faces) > 0:
-                        (x, y, fw, fh) = faces[0]
-                        fx, fy = x + fw//2, y + fh//2
-                        
-                        # Absolute calculation (Center is 90)
-                        # We use a 0.3 multiplier to prevent "overshooting"
-                        pan = int(90 - (fx - cx) * 0.3) 
-                        tilt = int(90 + (fy - cy) * 0.3) 
+                # Only send if we have a serial connection and it's been 100ms
+                if self.ser and (time.time() - self.last_send_time) > 0.1:
+                    cmd = f"X{pan}Y{tilt}Z{fire}\n"
+                    self.ser.write(cmd.encode())
+                    self.ser.flush()
+                    self.last_send_time = time.time()
+                    print(f"Targeting: {cmd.strip()}")
 
-                        fire = 1 if (abs(fx-cx) < 20 and abs(fy-cy) < 20) else 0
-                        
-                        if (time.time() - self.last_send_time) > 0.1:
-                            cmd = f"X{pan}Y{tilt}Z{fire}\n"
-                            self.ser.write(cmd.encode())
-                            self.last_send_time = time.time()
-                            print(f"Sent: {cmd.strip()}")
+            cv2.imshow('Turret AI View', frame)
+            if cv2.waitKey(1) & 0xFF == ord('q'):
+                break
 
-                        cv2.rectangle(frame, (x, y), (x+fw, y+fh), (0, 255, 0), 2)
-                        if fire: cv2.putText(frame, "LOCKED", (10, 30), 1, 2, (0,0,255), 2)
-
-                    cv2.imshow('Stationary ESP-CAM Tracking', frame)
-
-            if cv2.waitKey(1) & 0xFF == ord('q'): break
+        self.cap.release()
+        if self.ser: self.ser.close()
+        cv2.destroyAllWindows()
 
 if __name__ == "__main__":
     StationaryCamTurret().run()
