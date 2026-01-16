@@ -42,7 +42,7 @@ class LaptopTurret:
                 fx, fy = x + w//2, y + h//2
                 
                 pan = int(90 - ((fx - CENTER_X) * 0.3))
-                tilt = int(90 + ((fy - CENTER_Y) * 0.3))
+                tilt = int(80 + ((fy - CENTER_Y) * 0.3)) #offset correction
                 pan = max(0, min(180, pan))
                 tilt = max(0, min(180, tilt))
 
