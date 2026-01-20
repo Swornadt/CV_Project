@@ -64,3 +64,23 @@ than expected by the processor - python)
 and actually pass readible data; I spent very long trying to figure out how to make
 the python script catch the headers (0xAA and 0xBB), which failed in previous approaches. It's something to do with
 Passive sensing, but I haven't figured it out yet.
+
+
+# THINGS TO NOTE FOR PRESENTATION
+
+Camera specifications:
+Ensure that PSRAM is enabled. Or else there will be malloc
+problems.
+If memory problems persist, try decreasing the memory load
+by adjusting quality and size of image streamed.
+
+Hotspot Connectivity:
+The follow connections must be established:- 
+1. Redmi Hotspot ON
+2. Desktop Hotspot ON
+3. Desktop WiFi connected to Redmi Hotspot
+4. ESP-32 connected to Desktop WiFi.
+NOTE: The IP address assigned by the Desktop may change.
+In such cases, you must change the hardcoded IP in the "esp_lazer.py"
+file by checking in the "Mobile Hotspot" settings of Desktop and putting
+that IP in the python script.
