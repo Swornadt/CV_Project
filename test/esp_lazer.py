@@ -3,8 +3,8 @@ import serial
 import time
 
 # --- CONFIG ---
-URL = "http://192.168.137.85/stream" # Use the IP that worked in your test
-PORT = 'COM10'
+URL = "http://192.168.137.180/stream" # Use the IP that worked in your test
+PORT = 'COM3'
 BAUD = 115200
 
 class StationaryCamTurret:
@@ -41,7 +41,7 @@ class StationaryCamTurret:
 
     def run(self):
         #initialize variables
-        pan = 90
+        pan = 110
         tilt = 120
         
         while True:
@@ -64,8 +64,8 @@ class StationaryCamTurret:
                 cv2.rectangle(frame, (x, y), (x+fw, y+fh), (0, 255, 0), 2)
                 
                 # Map to degrees
-                PAN_CENTER = 110   
-                TILT_CENTER = 70   
+                PAN_CENTER = 90 #x-axis: decrease = right, increase = left (reference from behind)
+                TILT_CENTER = 55 #y-axis: decrease = higher, increase = lower
                 SENSITIVITY = 0.1  # Changed from 0.2 to 0.1 because pixels doubled
 
                 # ... inside the run() loop ...
