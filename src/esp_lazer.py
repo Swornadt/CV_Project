@@ -4,7 +4,7 @@ import time
 import os
 
 # --- CONFIG ---
-URL = "http://192.168.137.122/stream" 
+URL = "http://192.168.137.179/stream" 
 PORT = 'COM3'
 BAUD = 115200
 SAVE_DIR = "detected_faces"
