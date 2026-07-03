@@ -4,11 +4,11 @@ import time
 import os
 
 # --- CONFIG ---
-URL = "http://192.168.137.179/stream" 
+URL = "http://192.168.137.211/stream" 
 PORT = 'COM3'
 BAUD = 115200
 SAVE_DIR = "detected_faces"
-SAVE_COOLDOWN = 3.0  # Minimum seconds to wait before saving another picture
+SAVE_COOLDOWN = 10.0  # Minimum seconds to wait before saving another picture
 
 class StationaryCamTurret:
     def __init__(self):
